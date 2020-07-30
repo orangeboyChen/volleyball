@@ -3,22 +3,29 @@ package com.nowcent.volleyball;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-import android.os.Bundle;
+import android.net.Uri;
 import android.text.method.ScrollingMovementMethod;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Toast;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.xiaomi.mipush.sdk.MiPushClient;
 
 import org.androidannotations.annotations.AfterViews;
 import org.androidannotations.annotations.Background;
 import org.androidannotations.annotations.Click;
 import org.androidannotations.annotations.EActivity;
-import org.androidannotations.annotations.EditorAction;
+import org.androidannotations.annotations.LongClick;
 import org.androidannotations.annotations.TextChange;
 import org.androidannotations.annotations.UiThread;
 import org.androidannotations.annotations.ViewById;
@@ -48,19 +55,12 @@ import static com.nowcent.volleyball.Utils.save;
 @EActivity(R.layout.activity_main)
 public class MainActivity extends AppCompatActivity {
 
-//    //mipush
-//    private static final String APP_ID = "2882303761518536386";
-//    private static final String APP_KEY = "5221853638386";
-//    public static final String TAG = "com.xiaomi.mipushdemo";
-//    private static DemoHandler sHandler = null;
-//    private static MainActivity sMainActivity = null;
-
-
-
     private final int MIN_HOUR = 9;
     private final int MAX_HOUR = 22;
     private String password = null;
     private int teamId = -1;
+    Thread fastModeThread;
+    boolean fastModeThreadFlag = false;
 
     @ViewById(R.id.tokenEditText)
     EditText tokenEditText;
@@ -84,12 +84,34 @@ public class MainActivity extends AppCompatActivity {
 
     @AfterViews
     void init(){
-        getPassword();
+        getRemoteData();
         String savedToken = getSavedToken();
         tokenEditText.setText(savedToken == null ? "" : savedToken);
 
         String savedPassword = getSavedPassword();
         passwordEditText.setText(savedPassword == null ? "" : savedPassword);
+
+        VolleyballApplication.setMainActivity(this);
+        //设置别名，撤销别名（alias）
+        MiPushClient.setAlias(MainActivity.this, "123456", null);
+        //MiPushClient.unsetAlias(MainActivity.this, "demo1", null);
+        //设置账号，撤销账号（account）
+        MiPushClient.setUserAccount(MainActivity.this, "123456", null);
+        //MiPushClient.unsetUserAccount(MainActivity.this, "user1", null);
+        //设置标签，撤销标签（topic：话题、主题）
+        MiPushClient.subscribe(MainActivity.this, "notification", null);
+        //MiPushClient.unsubscribe(MainActivity.this, "IT", null);
+        //设置接收时间（startHour, startMin, endHour, endMin）
+        MiPushClient.setAcceptTime(MainActivity.this, 0, 0, 23, 59, null);
+        //暂停和恢复推送 //MiPushClient.pausePush(MainActivity.this, null);
+        //MiPushClient.resumePush(MainActivity.this, null);
+
+        MyReceiver receiver = new MyReceiver();
+        IntentFilter filter=new IntentFilter();
+        filter.addAction("com.huawei.codelabpush.ON_NEW_TOKEN");
+        MainActivity.this.registerReceiver(receiver,filter);
+
+        statusEditText.setVerticalScrollBarEnabled(true);
     }
 
 //    @Override
@@ -112,43 +134,36 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Background
-    void getPassword(){
+    void getRemoteData(){
         CloseableHttpClient closeableHttpClient = HttpClients.createDefault();
         HttpGet httpGet = new HttpGet("http://volleyball.nowcent.cn/password.html");
         CloseableHttpResponse execute;
-        try{
+        try {
             execute = closeableHttpClient.execute(httpGet);
 
 
             String result = EntityUtils.toString(execute.getEntity(), "UTF-8");
 
-            if(result == null || result.isEmpty()){
-                showDialog("获取密钥失败", "请检查网络连接", "好");
-                return;
+            if (result == null || result.isEmpty()) {
+                throw new IOException();
             }
 
-            //解析密钥
             JSONObject jsonObject = JSON.parseObject(result);
+            checkVersion(result);
+            String message = jsonObject.getString("message");
             password = jsonObject.getString("password");
 
-            //检查版本
-            int newVersionCode = jsonObject.getIntValue("newVersion");
-            PackageInfo packageInfo = getApplicationContext()
-                    .getPackageManager()
-                    .getPackageInfo(getPackageName(), 0);
-            int localVersion = packageInfo.versionCode;
-
-            if(newVersionCode > localVersion){
-                showDialog("找到新版本", "请前往下载", "好");
+            if(password == null || password.isEmpty()){
+                invalid();
             }
 
-            String message = jsonObject.getString("message");
-            if(!message.isEmpty()){
+            if (!message.isEmpty()) {
                 addStatusText("\n[公共信息]\n" + message);
             }
 
         }catch (IOException | PackageManager.NameNotFoundException e){
             e.printStackTrace();
+            invalid("权限验证失败");
         }
     }
 
@@ -180,12 +195,13 @@ public class MainActivity extends AppCompatActivity {
                 }
                 String result;
                 if((result = save(token, startDate, endDate, teamId)) == null){
-                    addStatusText("成功");
+                    addStatusText("抢场成功");
                     executorService.shutdownNow();
                     executorService = new ThreadPoolExecutor(1, 1, 0, TimeUnit.SECONDS, new ArrayBlockingQueue<>(512), new ThreadPoolExecutor.DiscardPolicy());
+                    showDialog("抢场成功", "请与" + startDate.getHours() + "时前到达场地", "好");
                 }
                 else{
-                    addStatusText(result);
+                    addStatusText(JSON.parseObject(result).getString("msg"));
                 }
                 Thread.sleep(250);
 
@@ -214,6 +230,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Click(R.id.submitButton)
     void onSubmitButtonClick() {
+//        LogcatHelper.getInstance(this).start();
         if(!isValidInput()){
             return;
         }
@@ -240,12 +257,69 @@ public class MainActivity extends AppCompatActivity {
         spider(token, startDate, endDate);
     }
 
+
+    @LongClick(R.id.submitButton)
+    void onSubmitButtonLongClick() {
+        fastModeThreadFlag = true;
+        fastModeThread = new Thread(() -> {
+            for (int i = 0; i < 50; i++) {
+                if(!fastModeThreadFlag){
+                    break;
+                }
+                onSubmitButtonClick();
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        fastModeThread.start();
+        showDialog("已打开快速模式", "自动点击按钮50次。如需退出，请长按状态显示框", "好");
+    }
+
+    @LongClick(R.id.statusEditText)
+    void stopSpider(){
+        showDialog("确定停止订场吗", null, "是", ((dialogInterface, i) -> {
+            fastModeThreadFlag = false;
+            executorService.shutdownNow();
+            executorService = new ThreadPoolExecutor(1, 1, 0, TimeUnit.SECONDS, new ArrayBlockingQueue<>(512), new ThreadPoolExecutor.DiscardPolicy());
+            showDialog("已停止订场", null, "好");
+
+        }), "否", ((dialogInterface, i) -> {}));
+    }
+
+    @UiThread
+    void showDialog(String title, String text, String positiveButtonText, DialogInterface.OnClickListener positiveListener,
+                    String negativeButtonText, DialogInterface.OnClickListener negativeListener){
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setMessage(text)
+                .setPositiveButton(positiveButtonText, positiveListener)
+                .setNegativeButton(negativeButtonText, negativeListener)
+                .setCancelable(false)
+                .show();
+
+    }
+
     @UiThread
     void showDialog(String title, String text, String positiveButtonText){
         new AlertDialog.Builder(this)
                 .setTitle(title)
                 .setMessage(text)
                 .setPositiveButton(positiveButtonText, (dialogInterface, i) -> {})
+                .setCancelable(false)
+                .show();
+
+    }
+
+    @UiThread
+    void showDialog(String title, String text, String positiveButtonText, DialogInterface.OnClickListener listener){
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setMessage(text)
+                .setPositiveButton(positiveButtonText, listener)
+                .setCancelable(false)
                 .show();
 
     }
@@ -312,8 +386,109 @@ public class MainActivity extends AppCompatActivity {
 
 
 
+    public class MyReceiver extends BroadcastReceiver {
 
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if ("com.huawei.codelabpush.ON_NEW_TOKEN".equals(intent.getAction())) {
+//                String token = intent.getStringExtra("token");
+//                Toast.makeText(context, token, Toast.LENGTH_LONG).show();
+//                showDialog("token", token, "好");
+            }
+        }
+    }
 
+    @Override
+    protected void onRestart() {
+        super.onRestart();
+        onRestartBackground();
+    }
 
+    @Background
+    void onRestartBackground(){
+        CloseableHttpClient closeableHttpClient = HttpClients.createDefault();
+        HttpGet httpGet = new HttpGet("http://volleyball.nowcent.cn/password.html");
+        CloseableHttpResponse execute;
+        try {
+            execute = closeableHttpClient.execute(httpGet);
+            String result = EntityUtils.toString(execute.getEntity(), "UTF-8");
+            if (result == null || result.isEmpty()) {
+                throw new IOException();
+            }
+            checkVersion(result);
 
+        }catch (IOException | PackageManager.NameNotFoundException e){
+            e.printStackTrace();
+            invalid("权限验证失败");
+        }
+    }
+
+    void checkVersion(String result) throws PackageManager.NameNotFoundException {
+        //解析密钥
+        JSONObject jsonObject = JSON.parseObject(result);
+
+        //检查版本
+        int newVersionCode = jsonObject.getIntValue("newVersion");
+        int minVersionCode = jsonObject.getIntValue("minVersion");
+        String apkUrl = jsonObject.getString("apkUrl");
+        String newVersionName = jsonObject.getString("newVersionName");
+        String updateLog = jsonObject.getString("updateLog");
+        PackageInfo packageInfo = getApplicationContext()
+                .getPackageManager()
+                .getPackageInfo(getPackageName(), 0);
+        int localVersion = packageInfo.versionCode;
+
+        if (BuildConfig.DEBUG && minVersionCode <= 0) {
+            invalid();
+            return;
+        }
+
+        if (newVersionCode > localVersion) {
+            if (minVersionCode > localVersion) {
+                showDialog("你的版本过时了，请前往下载",
+                        newVersionName + "\n" + updateLog,
+                        "好",
+                        ((dialogInterface, i) -> {
+                            Intent intent = new Intent(
+                                    Intent.ACTION_VIEW,
+                                    Uri.parse(apkUrl)
+                            );
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            startActivity(intent);
+                            finish();
+
+                        }));
+            } else {
+                showDialog("找到新版本",
+                        newVersionName + "\n" + updateLog,
+                        "去下载",
+                        ((dialogInterface, i) -> {
+                            Intent intent = new Intent(
+                                    Intent.ACTION_VIEW,
+                                    Uri.parse(apkUrl)
+                            );
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            startActivity(intent);
+
+                        }),
+                        "下次再说",
+                        ((dialogInterface, i) -> {
+                        }));
+            }
+        }
+    }
+
+    void invalid(){
+        runOnUiThread(() -> {
+            Toast.makeText(this, "本应用已被关闭，请稍后再试！", Toast.LENGTH_LONG).show();
+        });
+        finish();
+    }
+
+    void invalid(String msg){
+        runOnUiThread(() -> {
+            Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
+        });
+        finish();
+    }
 }

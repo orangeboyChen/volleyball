@@ -1,0 +1,13 @@
+{
+    "tpns": {
+        "access_id": "1500011294",
+        "access_key": "A0IJ9AF32SAR"
+    },
+    "com.nowcent.volleyball": {
+        "channel": {
+            "enable": true
+        }
+    },
+    "debug": false,
+    "version": "1.2.0.2"
+}
