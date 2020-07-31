@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "959841383438",
+    "firebase_url": "https://volleyball-c0a56.firebaseio.com",
+    "project_id": "volleyball-c0a56",
+    "storage_bucket": "volleyball-c0a56.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:959841383438:android:9e3bd46fd175b898c0f85f",
+        "android_client_info": {
+          "package_name": "com.nowcent.volleyball"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "959841383438-hc2uljsd65cg2hn1tkr88qggl0cou69k.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBReh-HHWjc_D4d17kyLe1hKuWVSh8vduY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "959841383438-hc2uljsd65cg2hn1tkr88qggl0cou69k.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

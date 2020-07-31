@@ -8,12 +8,11 @@ import android.os.Message;
 import android.os.Process;
 import android.text.TextUtils;
 import android.util.Log;
-import android.widget.Toast;
 
+import com.nowcent.volleyball.activity.MainActivity;
 import com.tencent.android.tpush.XGIOperateCallback;
 import com.tencent.android.tpush.XGPushConfig;
 import com.tencent.android.tpush.XGPushManager;
-import com.xiaomi.mipush.sdk.Logger;
 import com.xiaomi.mipush.sdk.MiPushClient;
 
 import java.util.List;
@@ -48,11 +47,12 @@ public class VolleyballApplication extends Application {
                 Log.d("TPush", "注册失败，错误码：" + errCode + ",错误信息：" + msg);
             }
         });
+        //打开第三方推送
+        XGPushConfig.enableOtherPush(getApplicationContext(), true);
+
         XGPushConfig.setMiPushAppId(getApplicationContext(), APP_ID);
         XGPushConfig.setMiPushAppKey(getApplicationContext(), APP_KEY);
 
-//打开第三方推送
-        XGPushConfig.enableOtherPush(getApplicationContext(), true);
 
         // 注册push服务，注册成功后会向DemoMessageReceiver发送广播
         // 可以从DemoMessageReceiver的onCommandResult方法中MiPushCommandMessage对象参数中获取注册信息
