@@ -9,7 +9,7 @@ import android.os.Process;
 import android.text.TextUtils;
 import android.util.Log;
 
-import com.nowcent.volleyball.activity.MainActivity;
+import com.nowcent.volleyball.activity.SpiderActivity;
 import com.tencent.android.tpush.XGIOperateCallback;
 import com.tencent.android.tpush.XGPushConfig;
 import com.tencent.android.tpush.XGPushManager;
@@ -28,7 +28,7 @@ public class VolleyballApplication extends Application {
     public static final String TAG = "com.xiaomi.mipushdemo";
 
     private static DemoHandler sHandler = null;
-    private static MainActivity sMainActivity = null;
+    private static SpiderActivity sSpiderActivity = null;
 
     @Override
     public void onCreate() {
@@ -104,8 +104,8 @@ public class VolleyballApplication extends Application {
         return sHandler;
     }
 
-    public static void setMainActivity(MainActivity activity) {
-        sMainActivity = activity;
+    public static void setMainActivity(SpiderActivity activity) {
+        sSpiderActivity = activity;
     }
 
     public static class DemoHandler extends Handler {
@@ -119,7 +119,7 @@ public class VolleyballApplication extends Application {
         @Override
         public void handleMessage(Message msg) {
             String s = (String) msg.obj;
-            if (sMainActivity != null) {
+            if (sSpiderActivity != null) {
 //                sMainActivity.refreshLogInfo();
             }
             if (!TextUtils.isEmpty(s)) {

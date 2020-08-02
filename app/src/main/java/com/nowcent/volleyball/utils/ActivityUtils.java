@@ -10,13 +10,12 @@ public class ActivityUtils {
     public static void invalid(Activity activity, String message){
         Intent intent = new Intent(activity, BanActivity_.class);
         intent.putExtra("message", message);
+        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
         activity.startActivity(intent);
         activity.finish();
     }
 
     public static void invalid(Activity activity){
-        Intent intent = new Intent(activity, BanActivity_.class);
-        activity.startActivity(intent);
-        activity.finish();
+        invalid(activity, null);
     }
 }

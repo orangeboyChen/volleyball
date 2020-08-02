@@ -64,6 +64,10 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.1.0'
     implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
+    implementation 'com.google.android.material:material:1.1.0'
+    implementation 'androidx.navigation:navigation-fragment:2.3.0'
+    implementation 'androidx.navigation:navigation-ui:2.3.0'
+    implementation 'androidx.lifecycle:lifecycle-extensions:2.2.0'
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test.ext:junit:1.1.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
@@ -80,6 +84,9 @@ dependencies {
 //    compile group: 'org.apache.httpcomponents', name: 'httpcore', version: '4.4.9'
 //    implementation "cz.msebera.android:httpclient:4.4.1.2"
     implementation files('libs/spider.jar')
+    implementation files('libs/AMap_Location_V5.1.0_20200708.jar')
+    implementation files('libs/AMap_Search_V7.4.0_20200723.jar')
+
 //    implementation files('libs/MiPush_SDK_Client_3_7_8.jar')
     implementation 'com.huawei.agconnect:agconnect-core:1.4.0.300'
     implementation 'com.tencent.tpns:huawei:v3-1.0.0.0-release'      // 华为推送服务 V4 TPNS 插件

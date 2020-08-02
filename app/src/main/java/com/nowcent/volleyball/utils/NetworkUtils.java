@@ -15,10 +15,13 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 
 import java.io.IOException;
+import java.security.MessageDigest;
 import java.util.HashMap;
 import java.util.function.Consumer;
 
 public class NetworkUtils {
+
+    private static final String SECRET = "DYaLiwkFYrHZjcIY";
 
     public static JSONObject getRemoteData() throws IOException {
         CloseableHttpClient closeableHttpClient = HttpClients.createDefault();
@@ -83,5 +86,92 @@ public class NetworkUtils {
             newVersion.accept(newVersionHashMap);
         }
 
+    }
+
+
+    public static JSONObject getRecentList() throws IOException {
+        String signature = getSignature();
+        CloseableHttpClient closeableHttpClient = HttpClients.createDefault();
+        HttpGet httpGet = new HttpGet("http://volleyball.nowcent.cn/api/get?signature=" + signature);
+        CloseableHttpResponse execute;
+        execute = closeableHttpClient.execute(httpGet);
+
+
+        String result = EntityUtils.toString(execute.getEntity(), "UTF-8");
+
+        if (result == null || result.isEmpty()) {
+            throw new IOException();
+        }
+
+        return JSON.parseObject(result);
+    }
+
+
+    public static JSONObject broadCastSuccess(String token, String from, String to, String nickname) throws IOException {
+        String signature = getSignature(token, from, to, nickname);
+
+        assert signature != null;
+        CloseableHttpClient closeableHttpClient = HttpClients.createDefault();
+        HttpGet httpGet = new HttpGet("http://volleyball.nowcent.cn/api/success?token=" + token.toUpperCase() +
+                "&from=" + from + "&to=" + to + "&nickname=" + nickname + "&signature=" + signature);
+        CloseableHttpResponse execute;
+        execute = closeableHttpClient.execute(httpGet);
+
+
+        String result = EntityUtils.toString(execute.getEntity(), "UTF-8");
+
+        if (result == null || result.isEmpty()) {
+            throw new IOException();
+        }
+
+        return JSON.parseObject(result);
+    }
+
+
+    public static JSONObject join(String fromToken, String toToken, String nickname) throws IOException {
+        String signature = getSignature(fromToken, toToken, nickname);
+
+
+        CloseableHttpClient closeableHttpClient = HttpClients.createDefault();
+        HttpGet httpGet = new HttpGet("http://volleyball.nowcent.cn/api/join?fromToken=" + fromToken +
+                "&toToken=" + toToken + "&nickname=" + nickname + "&signature=" + signature);
+        CloseableHttpResponse execute;
+        execute = closeableHttpClient.execute(httpGet);
+
+
+        String result = EntityUtils.toString(execute.getEntity(), "UTF-8");
+
+        if (result == null || result.isEmpty()) {
+            throw new IOException();
+        }
+
+        return JSON.parseObject(result);
+    }
+
+
+    private static String getSignature(String ... params){
+        StringBuilder paramString = new StringBuilder();
+        for (String param : params) {
+            paramString.append(param);
+        }
+        paramString.append(SECRET);
+
+        try {
+            MessageDigest digest = MessageDigest.getInstance("MD5");
+            byte[] bytes = digest.digest(paramString.toString().getBytes());
+            StringBuilder sb = new StringBuilder();
+            for (byte b : bytes) {
+                int c = b & 0xff;
+                String result = Integer.toHexString(c);
+                if(result.length()<2){
+                    sb.append(0);
+                }
+                sb.append(result);
+            }
+            return sb.toString();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        }
     }
 }
