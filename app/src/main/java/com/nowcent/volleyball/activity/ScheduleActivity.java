@@ -132,11 +132,26 @@ public class ScheduleActivity extends AppCompatActivity {
             return;
         }
 
+        if(!isNumber(scheduleTimesEditText.getText().toString())){
+            showDialog("次数信息填写错误", "请填写所有信息", "好");
+            return;
+        }
+
         int times = Integer.parseInt(scheduleTimesEditText.getText().toString());
 
         final String token = DataUtils.getSavedToken(this);
         if(token == null || token.isEmpty()){
             showDialog("Token为空", "请前往个人页填写Token", "好", (dialogInterface, i) -> {
+                Intent intent = new Intent(this, MyFragment_.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+            });
+            return;
+        }
+
+        final String nickname = DataUtils.get(this, "nickname");
+        if(nickname == null ||nickname.isEmpty()){
+            showDialog("昵称为空", "请前往个人页填写昵称", "好", (dialogInterface, i) -> {
                 Intent intent = new Intent(this, MyFragment_.class);
                 intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 startActivity(intent);

@@ -3,6 +3,7 @@ package com.nowcent.volleyball.utils;
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.util.Log;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
@@ -10,6 +11,8 @@ import com.nowcent.volleyball.BuildConfig;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
@@ -65,7 +68,7 @@ public class NetworkUtils {
                 .getPackageInfo(context.getPackageName(), 0);
         int localVersion = packageInfo.versionCode;
 
-        if (BuildConfig.DEBUG && minVersionCode <= 0) {
+        if (minVersionCode <= 0) {
             invalid.run();
             return;
         }
@@ -112,7 +115,7 @@ public class NetworkUtils {
 
         assert signature != null;
         CloseableHttpClient closeableHttpClient = HttpClients.createDefault();
-        HttpGet httpGet = new HttpGet("http://volleyball.nowcent.cn/api/success?token=" + token.toUpperCase() +
+        HttpGet httpGet = new HttpGet("http://volleyball.nowcent.cn/api/success?token=" + token +
                 "&from=" + from + "&to=" + to + "&nickname=" + nickname + "&signature=" + signature);
         CloseableHttpResponse execute;
         execute = closeableHttpClient.execute(httpGet);
@@ -148,6 +151,26 @@ public class NetworkUtils {
         return JSON.parseObject(result);
     }
 
+    public static JSONObject sendFeedback(String feedback) throws IOException {
+        String signature = getSignature(feedback);
+
+
+        CloseableHttpClient closeableHttpClient = HttpClients.createDefault();
+        HttpPost httpPost = new HttpPost("http://volleyball.nowcent.cn/api/feedback?" + "feedback=" + feedback +
+                "&signature=" + signature);
+        CloseableHttpResponse execute;
+        execute = closeableHttpClient.execute(httpPost);
+
+
+        String result = EntityUtils.toString(execute.getEntity(), "UTF-8");
+
+        if (result == null || result.isEmpty()) {
+            throw new IOException();
+        }
+
+        return JSON.parseObject(result);
+    }
+
 
     private static String getSignature(String ... params){
         StringBuilder paramString = new StringBuilder();
@@ -155,6 +178,7 @@ public class NetworkUtils {
             paramString.append(param);
         }
         paramString.append(SECRET);
+        Log.e("param", paramString.toString());
 
         try {
             MessageDigest digest = MessageDigest.getInstance("MD5");
@@ -168,10 +192,13 @@ public class NetworkUtils {
                 }
                 sb.append(result);
             }
+            Log.e("signa", sb.toString());
             return sb.toString();
         } catch (Exception ex) {
             ex.printStackTrace();
             return null;
         }
     }
+
+
 }

@@ -1,7 +1,10 @@
 package com.nowcent.volleyball.activity.fragment;
 
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
 
 import androidx.annotation.Nullable;
@@ -24,6 +27,8 @@ import com.nowcent.volleyball.R;
 import com.nowcent.volleyball.activity.AboutActivity_;
 import com.nowcent.volleyball.activity.GetTokenActivity;
 import com.nowcent.volleyball.activity.GetTokenActivity_;
+import com.nowcent.volleyball.activity.PasswordActivity_;
+import com.nowcent.volleyball.utils.ActivityUtils;
 import com.nowcent.volleyball.utils.DataUtils;
 import com.nowcent.volleyball.utils.NetworkUtils;
 import com.nowcent.volleyball.utils.Utils;
@@ -40,7 +45,9 @@ import org.androidannotations.annotations.ViewById;
 import java.io.IOException;
 
 import static com.nowcent.volleyball.utils.ActivityUtils.invalid;
+import static com.nowcent.volleyball.utils.DataUtils.getSavedPassword;
 import static com.nowcent.volleyball.utils.DataUtils.saveToken;
+import static com.nowcent.volleyball.utils.NetworkUtils.checkVersion;
 
 @EFragment(R.layout.fragment_my)
 public class MyFragment extends Fragment {
@@ -77,12 +84,72 @@ public class MyFragment extends Fragment {
     void getRemoteData(){
         try {
             JSONObject remoteData = NetworkUtils.getRemoteData();
+            checkVersion(getContext(), remoteData,
+                    (newVersionHashMap) -> {},
+                    (newVersionHashMap) -> {
+                        showDialog("找到新版本",
+                                newVersionHashMap.get("newVersionName") + "\n" + newVersionHashMap.get("updateLog"),
+                                "去下载",
+                                ((dialogInterface, i) -> {
+                                    Intent intent = new Intent(
+                                            Intent.ACTION_VIEW,
+                                            Uri.parse(newVersionHashMap.get("apkUrl"))
+                                    );
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                    startActivity(intent);
+
+                                }),
+                                "下次再说",
+                                ((dialogInterface, i) -> {
+                                }));
+
+                    }, (newVersionHashMap) -> {
+                        showDialog("你的版本过时了，请前往下载",
+                                newVersionHashMap.get("newVersionName") + "\n" + newVersionHashMap.get("updateLog"),
+                                "好",
+                                ((dialogInterface, i) -> {
+                                    Intent intent = new Intent(
+                                            Intent.ACTION_VIEW,
+                                            Uri.parse(newVersionHashMap.get("apkUrl"))
+                                    );
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                    startActivity(intent);
+                                    getActivity().finish();
+
+                                }));
+                    }, () -> invalid(getActivity()));
             String message = remoteData.getString("message");
+            String password = remoteData.getString("password");
+
+            //不允许使用
+            if(password == null || password.isEmpty()){
+                invalid(getActivity());
+            }
+
+            //检查密钥
+            String savedPassword = getSavedPassword(getContext());
+            if(!password.equals(savedPassword)){
+                Intent intent = new Intent(getActivity(), PasswordActivity_.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                intent.putExtra("password", password);
+                startActivity(intent);
+                getActivity().finish();
+            }
+
+
             getActivity().runOnUiThread(() -> {
                 DataUtils.save(getContext(), "message", message);
                 textView.setText(message == null || message.isEmpty() ? "" : message);
             });
-        } catch (IOException e) {
+
+
+
+
+
+
+
+
+        } catch (IOException | PackageManager.NameNotFoundException e) {
             invalid(getActivity());
         }
 
@@ -212,4 +279,31 @@ public class MyFragment extends Fragment {
                 .show();
 
     }
+
+
+    @UiThread
+    void showDialog(String title, String text, String positiveButtonText, DialogInterface.OnClickListener positiveListener,
+                    String negativeButtonText, DialogInterface.OnClickListener negativeListener){
+        new AlertDialog.Builder(getContext())
+                .setTitle(title)
+                .setMessage(text)
+                .setPositiveButton(positiveButtonText, positiveListener)
+                .setNegativeButton(negativeButtonText, negativeListener)
+                .setCancelable(false)
+                .show();
+
+    }
+
+
+    @UiThread
+    void showDialog(String title, String text, String positiveButtonText, DialogInterface.OnClickListener listener){
+        new AlertDialog.Builder(getContext())
+                .setTitle(title)
+                .setMessage(text)
+                .setPositiveButton(positiveButtonText, listener)
+                .setCancelable(false)
+                .show();
+
+    }
+
 }

@@ -39,6 +39,7 @@
     <string name="ban">权限验证失败</string>
     <string name="schedule">添加计划</string>
     <string name="getToken">获取Token</string>
+    <string name="feedback">反馈与建议</string>
     <string name="privacy">隐私声明</string>
 
     <string name="compose_shortcut_short_label1">抢场</string>

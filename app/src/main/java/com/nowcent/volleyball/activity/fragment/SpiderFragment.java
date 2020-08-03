@@ -4,12 +4,14 @@ import android.content.ComponentName;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.ClipDrawable;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.provider.CalendarContract;
@@ -33,6 +35,8 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.content.ContextCompat;
 import androidx.core.widget.NestedScrollView;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
@@ -43,37 +47,52 @@ import com.amap.api.services.weather.WeatherSearch;
 import com.amap.api.services.weather.WeatherSearchQuery;
 import com.nowcent.volleyball.R;
 import com.nowcent.volleyball.activity.MainActivity;
+import com.nowcent.volleyball.activity.PasswordActivity_;
 import com.nowcent.volleyball.activity.ScheduleActivity;
 //import com.nowcent.volleyball.activity.ScheduleActivity_;
 import com.nowcent.volleyball.activity.ScheduleActivity_;
+import com.nowcent.volleyball.activity.adapter.CardAdapter;
+import com.nowcent.volleyball.pojo.BookPojo;
 import com.nowcent.volleyball.pojo.ResultMessage;
 import com.nowcent.volleyball.service.SpiderService;
+import com.nowcent.volleyball.utils.ActivityUtils;
 import com.nowcent.volleyball.utils.DataUtils;
+import com.nowcent.volleyball.utils.NetworkUtils;
 import com.nowcent.volleyball.utils.Utils;
+import com.tencent.android.tpush.XGPushConfig;
 
 import org.androidannotations.annotations.AfterViews;
+import org.androidannotations.annotations.Background;
 import org.androidannotations.annotations.Click;
 import org.androidannotations.annotations.EFragment;
 import org.androidannotations.annotations.TextChange;
 import org.androidannotations.annotations.UiThread;
 import org.androidannotations.annotations.ViewById;
 
+import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
 import static android.content.Context.BIND_AUTO_CREATE;
+import static com.nowcent.volleyball.utils.ActivityUtils.invalid;
 import static com.nowcent.volleyball.utils.DataUtils.get;
 import static com.nowcent.volleyball.utils.DataUtils.getCurrent;
+import static com.nowcent.volleyball.utils.DataUtils.getSavedPassword;
 import static com.nowcent.volleyball.utils.DataUtils.getSavedToken;
 import static com.nowcent.volleyball.utils.DataUtils.save;
 import static com.nowcent.volleyball.utils.DataUtils.saveCurrent;
 import static com.nowcent.volleyball.utils.DataUtils.saveToken;
 import static com.nowcent.volleyball.utils.LocationUtils.getPosition;
+import static com.nowcent.volleyball.utils.NetworkUtils.checkVersion;
 import static com.nowcent.volleyball.utils.Utils.getTimeString;
 import static com.nowcent.volleyball.utils.Utils.isNumber;
 
@@ -133,9 +152,21 @@ public class SpiderFragment extends Fragment {
     @ViewById(R.id.cardView2)
     CardView singleCareView;
 
+    @ViewById(R.id.recyclerView)
+    RecyclerView recyclerView;
+
+    @ViewById(R.id.spiderRecentTipTextView)
+    TextView spiderRecentTipTextView;
+
+    CardAdapter adapter;
+
+    private boolean isFirstUpdateRecentData = true;
+
+
 
     SpiderService spiderService = null;
     SpiderService.SpiderBinder binder = null;
+    List<BookPojo> bookList = null;
 
     private ServiceConnection spiderConn = new ServiceConnection() {
         @Override
@@ -146,7 +177,7 @@ public class SpiderFragment extends Fragment {
             spiderService.setOnDataCallback(new SpiderService.OnDataCallback() {
                 @Override
                 public void onGetTeamIdError() {
-                    changeTaskInfo("失败", "获取TeamID失败！请检查Token是否正确。", Color.parseColor("#D50000"));
+                    changeTaskInfo("失败", "获取TeamID失败！请检查Token是否正确，或者您未通过实名认证。请关注微信公众号“罗湖文体通”，打开相应的页面进行实名认证！", Color.parseColor("#D50000"));
                     progressBar.setProgressDrawable(getContext().getResources().getDrawable(R.drawable.progressbar_red));
                     progressBar.setProgress(100);
                 }
@@ -170,6 +201,7 @@ public class SpiderFragment extends Fragment {
                 @Override
                 public void onTaskFail(String message) {
                     onTask();
+
                 }
 
                 @Override
@@ -182,13 +214,21 @@ public class SpiderFragment extends Fragment {
 
                 @Override
                 public void onCountDataChange(int current, int total) {
-
                     progressBar.setProgress((int)(current / (float)total * 100));
                 }
 
                 @Override
-                public void success() {
+                public void success(Date startDate, Date endDate) {
                     saveCurrent(getContext(), "cardTitle", "成功");
+                    String token = XGPushConfig.getToken(getContext());
+                    String nickname = DataUtils.get(getContext(), "nickname");
+                    try {
+                        JSONObject jsonObject = NetworkUtils.broadCastSuccess(token, String.valueOf(startDate.getHours()), String.valueOf(endDate.getHours()), nickname);
+                        Log.e("sujs", jsonObject.toJSONString());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        ActivityUtils.invalid(getActivity());
+                    }
                     getSuccess();
                 }
 
@@ -197,6 +237,7 @@ public class SpiderFragment extends Fragment {
 
                     String current = getCurrent(getContext(), "cardTitle");
                     if("成功".equals(current)){
+                        changeTaskInfo("本次失败但曾成功", null, Color.parseColor("#0091EA"));
                         return;
                     }
 
@@ -253,12 +294,20 @@ public class SpiderFragment extends Fragment {
         singleCareView.setVisibility(View.GONE);
         spiderTipTextView.setVisibility(View.GONE);
 
+        initRecentCardList();
+        getRecentData();
+        initCard();
+        checkRemoteData();
+
+        recyclerView.setNestedScrollingEnabled(false);
+        recyclerView.setFocusableInTouchMode(false);
+
 //        Intent activityIntent = getActivity().getIntent();
 //        JSONObject jsonObject = JSON.parseObject(activityIntent.getStringExtra("data"));
 //        spiderInfoTextView.setText(jsonObject.getString("message"));
 
 
-        Log.e("heights", String.valueOf(layoutParams.height));
+//        Log.e("heights", String.valueOf(layoutParams.height));
 
         String weatherAndPosition = get(getContext(), "spiderPositionAndWeatherTextView");
         String weatherInfo = get(getContext(), "spiderWeatherDetailTextView");
@@ -266,7 +315,6 @@ public class SpiderFragment extends Fragment {
         spiderPositionAndWeatherTextView.setText(weatherAndPosition == null ? "正在定位..." : weatherAndPosition);
         spiderWeatherDetailTextView.setText(weatherInfo == null ? "" : weatherInfo);
 
-        initCard();
 
         spiderService = new SpiderService();
         Intent intent = new Intent(getContext(), SpiderService.class);
@@ -353,11 +401,11 @@ public class SpiderFragment extends Fragment {
 //        return super.onCreateView(inflater, container, savedInstanceState);
     }
 
-    @Click(R.id.spiderImage)
-    void click(){
-        binder.setMessage("12233");
-        Log.e("binderM", binder.getService().getMessage());
-    }
+//    @Click(R.id.spiderImage)
+//    void click(){
+//        binder.setMessage("12233");
+//        Log.e("binderM", binder.getService().getMessage());
+//    }
 
     @Click(R.id.spiderDoButton)
     void showSingleCareView(){
@@ -388,6 +436,16 @@ public class SpiderFragment extends Fragment {
             });
             return;
         }
+
+        final String nickname = DataUtils.get(getContext(), "nickname");
+        if(nickname == null || nickname.isEmpty()){
+            showDialog("昵称为空", "请前往个人页填写昵称", "好", (dialogInterface, i) -> {
+                ((MainActivity)getActivity()).getNavController().navigate(R.id.myFragment);
+                ((MainActivity)getActivity()).getNavView().setSelectedItemId(R.id.myFragment);
+            });
+            return;
+        }
+
         Utils.conveyToCorrectDate(spiderFromEditText, spiderToEditText, (startDate, endDate) -> {
             binder.addTask(token, startDate, endDate);
         });
@@ -565,5 +623,154 @@ public class SpiderFragment extends Fragment {
     }
 
 
+    @Background
+    void getRecentData(){
+        try {
+            JSONObject jsonObject = NetworkUtils.getRecentList();
+            if(jsonObject.getIntValue("code") == 200){
+                List<BookPojo> list = jsonObject.getJSONArray("data").toJavaList(BookPojo.class);
+                if(list == null || list.size() == 0){
+                    getActivity().runOnUiThread(() -> {
+                        spiderRecentTipTextView.setVisibility(View.VISIBLE);
+                    });
+                }
+                else{
+                    getActivity().runOnUiThread(() -> {
+                        spiderRecentTipTextView.setVisibility(View.GONE);
+                    });
 
+                    getActivity().runOnUiThread(() -> {
+                        if(isFirstUpdateRecentData){
+                            bookList.clear();
+                            bookList.addAll(list);
+                        }
+                        adapter.notifyDataSetChanged();
+                    });
+                }
+            }
+            else{
+                showDialog("获取订场信息失败", jsonObject.getString("message") == null || jsonObject.getString("message").isEmpty() ? null : "错误信息：" + jsonObject.getString("message"), "好");
+                spiderRecentTipTextView.setVisibility(View.VISIBLE);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            ActivityUtils.invalid(getActivity());
+        }
+    }
+
+
+    private void initRecentCardList(){
+        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getContext());
+        recyclerView.setLayoutManager(linearLayoutManager);
+
+        bookList = new ArrayList<>();
+        adapter = new CardAdapter(getContext(), bookList, this::join);
+        recyclerView.setAdapter(adapter);
+
+    }
+
+    @Background
+    void join(int i){
+        String nickname = get(getContext(), "nickname");
+        if(nickname == null || nickname.isEmpty()){
+            showDialog("昵称为空", "请至个人页面输入昵称后再进行约球", "好", (dialogInterface, j) -> {
+                ((MainActivity)getActivity()).getNavController().navigate(R.id.myFragment);
+                ((MainActivity)getActivity()).getNavView().setSelectedItemId(R.id.myFragment);
+            }, "下次再说", (dialogInterface, j) -> {});
+            return;
+        }
+
+        BookPojo bookPojo = bookList.get(i);
+
+        String fromToken = XGPushConfig.getToken(getContext());
+        String toToken = bookPojo.getToken();
+
+        Log.e("fromToken", fromToken);
+        Log.e("toToken", toToken);
+
+        try {
+            JSONObject result = NetworkUtils.join(fromToken, toToken, nickname);
+            Log.e("error", result.toString());
+            if(result.getIntValue("code") == 200){
+                showDialog("约球成功", "对方已经收到了你的约球请求。", "好");
+            }
+            else{
+                String message = result.getString("message");
+                showDialog("约球失败",
+                        message == null || message.isEmpty() ? null : "错误信息：" + message, "好");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            ActivityUtils.invalid(getActivity());
+        }
+
+    }
+
+    @Background
+    void checkRemoteData(){
+        try {
+            JSONObject result = NetworkUtils.getRemoteData();
+
+            if(result == null || result.isEmpty()){
+                result = NetworkUtils.getRemoteData();
+            }
+
+            checkVersion(getContext(), result,
+                    (newVersionHashMap) -> {},
+                    (newVersionHashMap) -> {
+                        showDialog("找到新版本",
+                                newVersionHashMap.get("newVersionName") + "\n" + newVersionHashMap.get("updateLog"),
+                                "去下载",
+                                ((dialogInterface, i) -> {
+                                    Intent intent = new Intent(
+                                            Intent.ACTION_VIEW,
+                                            Uri.parse(newVersionHashMap.get("apkUrl"))
+                                    );
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                    startActivity(intent);
+
+                                }),
+                                "下次再说",
+                                ((dialogInterface, i) -> {
+                                }));
+
+                    }, (newVersionHashMap) -> {
+                        showDialog("你的版本过时了，请前往下载",
+                                newVersionHashMap.get("newVersionName") + "\n" + newVersionHashMap.get("updateLog"),
+                                "好",
+                                ((dialogInterface, i) -> {
+                                    Intent intent = new Intent(
+                                            Intent.ACTION_VIEW,
+                                            Uri.parse(newVersionHashMap.get("apkUrl"))
+                                    );
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                    startActivity(intent);
+                                    getActivity().finish();
+
+                                }));
+                    }, () -> invalid(getActivity()));
+            String message = result.getString("message");
+            String password = result.getString("password");
+
+            //不允许使用
+            if(password == null || password.isEmpty()){
+                invalid(getActivity());
+            }
+
+            //检查密钥
+            String savedPassword = getSavedPassword(getContext());
+            if(!password.equals(savedPassword)){
+                Intent intent = new Intent(getActivity(), PasswordActivity_.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                intent.putExtra("password", password);
+                startActivity(intent);
+                getActivity().finish();
+            }
+
+
+        } catch (IOException | PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+            ActivityUtils.invalid(getActivity());
+        }
+    }
 }

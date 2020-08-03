@@ -104,10 +104,15 @@ public class AboutActivity extends AppCompatActivity {
 //                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 //                    startActivity(intent);
 
-                    Intent intent = new Intent(this, PrivacyActivity_.class);
-                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    startActivity(intent);
-
+                    Intent intent1 = new Intent(this, PrivacyActivity_.class);
+                    intent1.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(intent1);
+                    break;
+                case 2:
+                    Intent intent2 = new Intent(this, FeedbackActivity_.class);
+                    intent2.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(intent2);
+                    break;
             }
         });
 

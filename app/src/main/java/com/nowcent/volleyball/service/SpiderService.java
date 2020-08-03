@@ -88,31 +88,36 @@ public class SpiderService extends IntentService {
             Thread thread = new Thread(() -> {
                 try {
                     MainActivity.setStatus(true);
-                    teamId = getTeamId(token, startDate, endDate);
-                    if (teamId == -1) {
-                        onDataCallback.onGetTeamIdError();
-                        executorService.shutdownNow();
+                    if(teamId == -1){
+                        teamId = getTeamId(token, startDate, endDate);
+                        if (teamId == -1) {
+                            executorService.shutdownNow();
 
-                        addResultMessage(new Date(), "获取TeamID失败");
+                            addResultMessage(new Date(), "获取TeamID失败");
 
-                        onDataCallback.onCountDataChange(taskTotal, taskTotal);
-                        taskTotal = 0;
-                        taskCurrent = 0;
-                        MainActivity.setStatus(false);
-                        Thread.sleep(250);
-                        return;
-                    } else {
-                        onDataCallback.onGetTeamIdSuccess(teamId);
+                            taskCurrent = taskTotal;
+                            onDataCallback.onCountDataChange(taskTotal, taskTotal);
+                            onDataCallback.onGetTeamIdError();
+
+                            taskTotal = 0;
+                            taskCurrent = 0;
+                            MainActivity.setStatus(false);
+                            Thread.sleep(250);
+                            return;
+                        } else {
+                            onDataCallback.onGetTeamIdSuccess(teamId);
+                        }
                     }
 
 
                     boolean isSuccess = false;
-                    String result;
-                    if ((result = save(token, startDate, endDate, teamId)) == null) {
+                    String result = save(token, startDate, endDate, teamId);
+                    if (result == null) {
                         executorService.shutdownNow();
                         executorService = new ThreadPoolExecutor(1, 1, 0, TimeUnit.SECONDS, new ArrayBlockingQueue<>(512), new ThreadPoolExecutor.DiscardPolicy());
 //                            showDialog("抢场成功", "请与" + startDate.getHours() + "时前到达场地", "好");
                         onDataCallback.onTaskSuccess(startDate, endDate);
+                        taskCurrent = taskTotal;
 
                         addResultMessage(new Date(), "成功预定" + startDate.getHours() + "时至" + endDate.getHours() + "时的场地");
                         isSuccess = true;
@@ -126,13 +131,17 @@ public class SpiderService extends IntentService {
 
                     taskCurrent++;
                     onDataCallback.onCountDataChange(taskCurrent, taskTotal);
+
+                    Log.e("tc", String.valueOf(taskCurrent));
+                    Log.e("tt", String.valueOf(taskTotal));
+
                     if (taskCurrent == taskTotal) {
                         taskCurrent = 0;
                         taskTotal = 0;
 
                         MainActivity.setStatus(false);
                         if(isSuccess){
-                            onDataCallback.success();
+                            onDataCallback.success(startDate, endDate);
                         }
                         else{
                             onDataCallback.fail();
@@ -185,7 +194,7 @@ public class SpiderService extends IntentService {
         void onRecentResult(ResultMessage recentResult);
 
         void onCountDataChange(int current, int total);
-        void success();
+        void success(Date startDate, Date endDate);
         void fail();
     }
 
@@ -214,7 +223,6 @@ public class SpiderService extends IntentService {
             public void run() {
 //                int i = 1;
                 while (isRunning) {
-                    Log.e("service", "service ON");
                     Thread.sleep(2000);
 //                    if(onDataCallback != null){
 //                        onDataCallback.onDataChange(message + i);

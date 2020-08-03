@@ -85,7 +85,7 @@
 
                 <TextView
                     android:id="@+id/textView16"
-                    android:layout_width="80sp"
+                    android:layout_width="70sp"
                     android:layout_height="wrap_content"
                     android:text="昵称"
                     app:layout_constraintBottom_toBottomOf="parent"
@@ -122,7 +122,7 @@
 
                 <TextView
                     android:id="@+id/textView17"
-                    android:layout_width="80sp"
+                    android:layout_width="70sp"
                     android:layout_height="wrap_content"
                     android:text="Token"
                     app:layout_constraintBottom_toBottomOf="parent"

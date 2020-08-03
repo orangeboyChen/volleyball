@@ -192,7 +192,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="16dp"
                     android:ems="10"
-                    android:inputType="textPersonName"
+                    android:inputType="number"
                     android:maxLength="3"
                     android:numeric="integer"
                     android:text="50"

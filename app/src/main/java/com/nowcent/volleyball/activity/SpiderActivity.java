@@ -209,28 +209,6 @@ public class SpiderActivity extends AppCompatActivity {
             e.printStackTrace();
             invalid(this, "权限验证失败");
         }
-
-
-//        CloseableHttpClient closeableHttpClient = HttpClients.createDefault();
-//        HttpGet httpGet = new HttpGet("http://volleyball.nowcent.cn/password.html");
-//        CloseableHttpResponse execute;
-//        try {
-//            execute = closeableHttpClient.execute(httpGet);
-//
-//
-//            String result = EntityUtils.toString(execute.getEntity(), "UTF-8");
-//
-//            if (result == null || result.isEmpty()) {
-//                throw new IOException();
-//            }
-//
-//            JSONObject jsonObject = JSON.parseObject(result);
-//            checkVersion(result);
-//
-//        }catch (IOException | PackageManager.NameNotFoundException e){
-//            e.printStackTrace();
-//            invalid("权限验证失败");
-//        }
     }
 
     @TextChange(R.id.startDateEditText)

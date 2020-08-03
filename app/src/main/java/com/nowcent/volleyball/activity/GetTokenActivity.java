@@ -84,26 +84,26 @@ public class GetTokenActivity extends AppCompatActivity {
         });
 
         String appCachePath = getApplicationContext().getCacheDir().getAbsolutePath();
-
-
         CookieSyncManager.createInstance(getApplicationContext());
         CookieManager cookieManager = CookieManager.getInstance();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            cookieManager.removeSessionCookies(null);
-            cookieManager.removeAllCookie();
-            cookieManager.flush();
-        } else {
-            cookieManager.removeSessionCookies(null);
-            cookieManager.removeAllCookie();
-            CookieSyncManager.getInstance().sync();
-        }
+        cookieManager.removeSessionCookies(null);
+        cookieManager.removeAllCookie();
+        cookieManager.flush();
         WebStorage.getInstance().deleteAllData();
+
 
         webView.getSettings().setDomStorageEnabled(true);
         webView.getSettings().setAppCacheMaxSize(1024*1024*8);//存储的最大容量
         webView.getSettings().setAppCachePath(appCachePath);
+
         webView.getSettings().setAllowFileAccess(true);
         webView.getSettings().setAppCacheEnabled(true);
+        webView.getSettings().setDatabaseEnabled(true);
+        webView.getSettings().setJavaScriptEnabled(true);
+
+
+
+
 
 
 
