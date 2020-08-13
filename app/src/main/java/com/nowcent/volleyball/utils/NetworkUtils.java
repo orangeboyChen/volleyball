@@ -122,6 +122,7 @@ public class NetworkUtils {
         execute = closeableHttpClient.execute(httpGet);
 
 
+
         String result = EntityUtils.toString(execute.getEntity(), "UTF-8");
 
         if (result == null || result.isEmpty()) {
