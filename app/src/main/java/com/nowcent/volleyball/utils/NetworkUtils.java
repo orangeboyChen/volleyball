@@ -117,6 +117,7 @@ public class NetworkUtils {
         CloseableHttpClient closeableHttpClient = HttpClients.createDefault();
         HttpGet httpGet = new HttpGet("http://volleyball.nowcent.cn/api/success?token=" + token +
                 "&from=" + from + "&to=" + to + "&nickname=" + nickname + "&signature=" + signature);
+
         CloseableHttpResponse execute;
         execute = closeableHttpClient.execute(httpGet);
 
@@ -178,7 +179,6 @@ public class NetworkUtils {
             paramString.append(param);
         }
         paramString.append(SECRET);
-        Log.e("param", paramString.toString());
 
         try {
             MessageDigest digest = MessageDigest.getInstance("MD5");
@@ -192,7 +192,6 @@ public class NetworkUtils {
                 }
                 sb.append(result);
             }
-            Log.e("signa", sb.toString());
             return sb.toString();
         } catch (Exception ex) {
             ex.printStackTrace();

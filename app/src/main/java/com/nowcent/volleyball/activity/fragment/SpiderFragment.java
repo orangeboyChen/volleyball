@@ -1,5 +1,7 @@
 package com.nowcent.volleyball.activity.fragment;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.content.ComponentName;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -158,6 +160,9 @@ public class SpiderFragment extends Fragment {
     @ViewById(R.id.spiderRecentTipTextView)
     TextView spiderRecentTipTextView;
 
+    @ViewById(R.id.spiderRecentTitleTextView)
+    TextView spiderRecentTitleTextView;
+
     CardAdapter adapter;
 
     private boolean isFirstUpdateRecentData = true;
@@ -190,6 +195,7 @@ public class SpiderFragment extends Fragment {
                 public void onTask(){
                     changeTaskInfo("抢场中", null, Color.parseColor("#0091EA"));
 
+                    Log.e("onTask", "onTask");
                     progressBar.setProgressDrawable(getContext().getResources().getDrawable(R.drawable.progressbar_orange));
                 }
 
@@ -200,12 +206,16 @@ public class SpiderFragment extends Fragment {
 
                 @Override
                 public void onTaskFail(String message) {
+
+                    Log.e("onTask", "onfail");
+
                     onTask();
 
                 }
 
                 @Override
                 public void onRecentResult(ResultMessage recentResult) {
+                    Log.e("onTask", "recent");
                     save(getContext(), "recentMessage", JSON.toJSONString(recentResult));
                     getActivity().runOnUiThread(() -> {
                         spiderStatusInfoTextView.setText(getTimeString(recentResult.getTime()) + " " + recentResult.getMessage());
@@ -219,6 +229,7 @@ public class SpiderFragment extends Fragment {
 
                 @Override
                 public void success(Date startDate, Date endDate) {
+                    Log.e("onTask", "success");
                     saveCurrent(getContext(), "cardTitle", "成功");
                     String token = XGPushConfig.getToken(getContext());
                     String nickname = DataUtils.get(getContext(), "nickname");
@@ -234,7 +245,7 @@ public class SpiderFragment extends Fragment {
 
                 @Override
                 public void fail() {
-
+                    Log.e("onTask", "fail");
                     String current = getCurrent(getContext(), "cardTitle");
                     if("成功".equals(current)){
                         changeTaskInfo("本次失败但曾成功", null, Color.parseColor("#0091EA"));
@@ -289,7 +300,7 @@ public class SpiderFragment extends Fragment {
     @AfterViews
     void init(){
         ConstraintLayout.LayoutParams layoutParams = (ConstraintLayout.LayoutParams) nestedSCrollView.getLayoutParams();
-        layoutParams.height = getContext().getResources().getDisplayMetrics().heightPixels - (int)(( 200 ) * getContext().getResources().getDisplayMetrics().density);
+        layoutParams.height = getContext().getResources().getDisplayMetrics().heightPixels - (int)(( 160 ) * getContext().getResources().getDisplayMetrics().density);
 
         singleCareView.setVisibility(View.GONE);
         spiderTipTextView.setVisibility(View.GONE);
@@ -407,20 +418,99 @@ public class SpiderFragment extends Fragment {
 //        Log.e("binderM", binder.getService().getMessage());
 //    }
 
+    private void fadeIn(View view){
+        view.setAlpha(0f);
+        view.setVisibility(View.VISIBLE);
+        view.animate()
+                .alpha(1f)
+                .setDuration(250)
+                .setListener(new AnimatorListenerAdapter() {
+                    @Override
+                    public void onAnimationEnd(Animator animation) {
+                        super.onAnimationEnd(animation);
+                        view.setVisibility(View.VISIBLE);
+                    }
+                });
+    }
+
+    private void fadeIn(View view, Runnable runnable){
+        view.setAlpha(0f);
+        view.setVisibility(View.VISIBLE);
+        view.animate()
+                .alpha(1f)
+                .setDuration(250)
+                .setListener(new AnimatorListenerAdapter() {
+                    @Override
+                    public void onAnimationEnd(Animator animation) {
+                        super.onAnimationEnd(animation);
+                        runnable.run();
+                    }
+                });
+    }
+
+    private void fadeOut(View view){
+        view.setAlpha(1f);
+        view.setVisibility(View.VISIBLE);
+        view.animate()
+                .alpha(0f)
+                .setDuration(100)
+                .setListener(new AnimatorListenerAdapter() {
+                    @Override
+                    public void onAnimationEnd(Animator animation) {
+                        super.onAnimationEnd(animation);
+                        view.setVisibility(View.GONE);
+                    }
+                });
+    }
+
+    private void fadeOut(View view, Runnable runnable){
+        view.setAlpha(1f);
+        view.setVisibility(View.VISIBLE);
+        view.animate()
+                .alpha(0f)
+                .setDuration(100)
+                .setListener(new AnimatorListenerAdapter() {
+                    @Override
+                    public void onAnimationEnd(Animator animation) {
+                        super.onAnimationEnd(animation);
+                        runnable.run();
+                    }
+                });
+    }
+
     @Click(R.id.spiderDoButton)
     void showSingleCareView(){
         if(singleCareView.getVisibility() == View.VISIBLE){
-            singleCareView.setVisibility(View.GONE);
+            fadeOut(singleCareView);
+            if(bookList != null && bookList.size() > 0) {
+                fadeOut(spiderRecentTitleTextView, () -> {
+                    fadeIn(spiderRecentTitleTextView);
+                });
+            }
+
+            fadeOut(recyclerView, () -> {
+                fadeIn(recyclerView);
+            });
         }
         else{
-            singleCareView.setVisibility(View.VISIBLE);
+            if(bookList != null && bookList.size() > 0) {
+                fadeOut(spiderRecentTitleTextView, () -> {
+                    fadeIn(spiderRecentTitleTextView);
+                });
+            }
+            fadeOut(recyclerView, () -> {
+                fadeIn(recyclerView);
+                fadeIn(singleCareView);
+            });
+
+
         }
     }
 
     @Click(R.id.spiderSingleSubmitButton)
     void onSingleSubmitClick(){
         if(!Utils.isValidInput(spiderFromEditText, spiderToEditText, () -> {
-            showDialog("日期填写错误", "请填写正确的日期", "好");
+            showDialog("时间填写错误", "请填写正确的时间", "好");
         })){
             return;
         }
@@ -515,9 +605,9 @@ public class SpiderFragment extends Fragment {
 //            return false;
 //        }
 
-        //检查文本框的信息是否正确（日期）
+        //检查文本框的信息是否正确（时间）
         if(!isNumber(spiderFromEditText.getText().toString()) || !isNumber(spiderToEditText.getText().toString())){
-            showDialog("日期填写错误", "请填写正确的日期", "好");
+            showDialog("时间填写错误", "请填写正确的时间", "好");
             return false;
         }
 
@@ -529,7 +619,7 @@ public class SpiderFragment extends Fragment {
                 endHour < MIN_HOUR ||
                 endHour > MAX_HOUR ||
                 endHour - startHour != 1){
-            showDialog("日期填写错误", "请填写正确的日期", "好");
+            showDialog("时间填写错误", "请填写正确的时间", "好");
             return false;
         }
         return true;
@@ -563,7 +653,6 @@ public class SpiderFragment extends Fragment {
 
     @Override
     public void onHiddenChanged(boolean hidden) {
-        Log.e("hidden", String.valueOf(hidden));
         super.onHiddenChanged(hidden);
     }
 
@@ -631,12 +720,12 @@ public class SpiderFragment extends Fragment {
                 List<BookPojo> list = jsonObject.getJSONArray("data").toJavaList(BookPojo.class);
                 if(list == null || list.size() == 0){
                     getActivity().runOnUiThread(() -> {
-                        spiderRecentTipTextView.setVisibility(View.VISIBLE);
+                        spiderRecentTitleTextView.setVisibility(View.GONE);
                     });
                 }
                 else{
                     getActivity().runOnUiThread(() -> {
-                        spiderRecentTipTextView.setVisibility(View.GONE);
+                        spiderRecentTitleTextView.setVisibility(View.VISIBLE);
                     });
 
                     getActivity().runOnUiThread(() -> {
@@ -685,12 +774,9 @@ public class SpiderFragment extends Fragment {
         String fromToken = XGPushConfig.getToken(getContext());
         String toToken = bookPojo.getToken();
 
-        Log.e("fromToken", fromToken);
-        Log.e("toToken", toToken);
 
         try {
             JSONObject result = NetworkUtils.join(fromToken, toToken, nickname);
-            Log.e("error", result.toString());
             if(result.getIntValue("code") == 200){
                 showDialog("约球成功", "对方已经收到了你的约球请求。", "好");
             }

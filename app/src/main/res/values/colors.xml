@@ -8,4 +8,8 @@
 
     <color name="black_overlay">@color/ic_launcher_background</color>
 
+    <color name="lightBackgroundFront">#333333</color>
+
+    <color name="lightBackground">#FAFAFA</color>
+
 </resources>

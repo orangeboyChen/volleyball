@@ -75,7 +75,6 @@
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
         </activity>
-        <activity android:name=".activity.SpiderActivity_" /> <!-- android:theme="@style/AppTheme"> -->
         <!-- <application -->
         <!-- android:theme="@style/Theme.AppCompat.Light.NoActionBar" -->
         <!-- /> -->

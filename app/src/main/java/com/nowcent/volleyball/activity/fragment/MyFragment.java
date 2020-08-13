@@ -13,6 +13,7 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.widget.NestedScrollView;
 import androidx.fragment.app.Fragment;
 
+import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -61,13 +62,15 @@ public class MyFragment extends Fragment {
     void init(){
 
         ConstraintLayout.LayoutParams layoutParams = (ConstraintLayout.LayoutParams) nestedScrollView.getLayoutParams();
-        layoutParams.height = getContext().getResources().getDisplayMetrics().heightPixels - (int)(( 350 ) * getContext().getResources().getDisplayMetrics().density);
+        layoutParams.height = getContext().getResources().getDisplayMetrics().heightPixels - (int)(( 320 ) * getContext().getResources().getDisplayMetrics().density);
 
         String token = DataUtils.getSavedToken(getContext());
         String nickname = DataUtils.get(getContext(), "nickname");
 
         myTokenEditText.setText(token == null ? "" : token);
         myNicknameEditText.setText(nickname == null ? "" : nickname);
+
+        myTokenEditText.setMovementMethod(ScrollingMovementMethod.getInstance());
 
         String message = DataUtils.get(getContext(), "message");
         if(message != null && !message.isEmpty()){
@@ -236,6 +239,8 @@ public class MyFragment extends Fragment {
 //        super.onCreate(savedInstanceState);
 //    }
 //
+
+    private View rootView;
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -248,8 +253,22 @@ public class MyFragment extends Fragment {
                         View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
                         View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
         );
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_my, container, false);
+
+
+        if(rootView == null){
+            return inflater.inflate(R.layout.fragment_my, container, false);
+        }
+        else{
+            ViewGroup viewGroup = (ViewGroup) rootView.getParent();
+            if(viewGroup != null){
+                viewGroup.removeView(rootView);
+            }
+//            if(viewGroup != null){
+//                rootView = null;
+//                rootView = inflater.inflate(R.layout.fragment_spider, container, false);
+//            }
+        }
+        return rootView;
     }
 
     @Override

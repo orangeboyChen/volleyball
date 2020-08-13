@@ -26,6 +26,7 @@ import javax.script.ScriptException;
 
 public class Utils {
     private static final String PRE_URL = "https://lhwtt.ydmap.cn";
+//        private static final String PRE_URL = "http://192.168.31.226:8080";
     private static final String SAVE_URI = "/v2/sportPlatform/save.do";
     private static final String ORDER_URI = "/v2/sportPlatformUser/queryByDealPlatform.do";
     private static final String METHOD = "post";

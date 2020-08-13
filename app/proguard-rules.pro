@@ -57,3 +57,30 @@
 -keep class com.vivo.push.**{*; }
 -keep class com.vivo.vms.**{*; }
 -keep class com.tencent.android.vivopush.VivoPushMessageReceiver{*;}
+
+
+
+#logs
+-optimizations code/removal/advanced
+-optimizationpasses 5
+
+#去掉log4j的log:
+
+-assumenosideeffects class * implements org.slf4j.Logger {
+    public *** trace(...);
+    public *** debug(...);
+    public *** info(...);
+    public *** warn(...);
+    public *** error(...);
+}
+
+#去掉android原生log:
+
+-assumenosideeffects class android.util.Log {
+    public static boolean isLoggable(java.lang.String, int);
+    public static int v(...);
+    public static int i(...);
+    public static int w(...);
+    public static int d(...);
+    public static int e(...);
+}

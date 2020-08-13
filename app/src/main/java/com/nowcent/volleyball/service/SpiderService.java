@@ -35,13 +35,6 @@ import lombok.SneakyThrows;
 import static com.nowcent.volleyball.utils.Utils.getTeamId;
 import static com.nowcent.volleyball.utils.Utils.save;
 
-/**
- * An {@link IntentService} subclass for handling asynchronous task requests in
- * a service on a separate handler thread.
- * <p>
- * TODO: Customize class - update intent actions, extra parameters and static
- * helper methods.
- */
 public class SpiderService extends IntentService {
 
     private String message = "";
@@ -113,14 +106,15 @@ public class SpiderService extends IntentService {
                     boolean isSuccess = false;
                     String result = save(token, startDate, endDate, teamId);
                     if (result == null) {
-                        executorService.shutdownNow();
-                        executorService = new ThreadPoolExecutor(1, 1, 0, TimeUnit.SECONDS, new ArrayBlockingQueue<>(512), new ThreadPoolExecutor.DiscardPolicy());
+//                        executorService = new ThreadPoolExecutor(1, 1, 0, TimeUnit.SECONDS, new ArrayBlockingQueue<>(512), new ThreadPoolExecutor.DiscardPolicy());
 //                            showDialog("抢场成功", "请与" + startDate.getHours() + "时前到达场地", "好");
-                        onDataCallback.onTaskSuccess(startDate, endDate);
-                        taskCurrent = taskTotal;
+                        onDataCallback.success(startDate, endDate);
+                        taskCurrent = taskTotal = 0;
+                        MainActivity.setStatus(false);
 
                         addResultMessage(new Date(), "成功预定" + startDate.getHours() + "时至" + endDate.getHours() + "时的场地");
                         isSuccess = true;
+                        executorService.shutdownNow();
                     } else {
                         String msg = JSON.parseObject(result).getString("msg");
                         onDataCallback.onTaskFail(msg);
@@ -132,10 +126,7 @@ public class SpiderService extends IntentService {
                     taskCurrent++;
                     onDataCallback.onCountDataChange(taskCurrent, taskTotal);
 
-                    Log.e("tc", String.valueOf(taskCurrent));
-                    Log.e("tt", String.valueOf(taskTotal));
-
-                    if (taskCurrent == taskTotal) {
+                    if (taskCurrent >= taskTotal) {
                         taskCurrent = 0;
                         taskTotal = 0;
 

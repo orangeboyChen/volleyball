@@ -8,6 +8,7 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
@@ -16,9 +17,11 @@ import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
+import android.widget.TextView;
 
 import com.alibaba.fastjson.JSONObject;
 import com.nowcent.volleyball.R;
@@ -27,6 +30,7 @@ import com.tencent.android.tpush.XGPushConfig;
 
 import org.androidannotations.annotations.AfterViews;
 import org.androidannotations.annotations.Background;
+import org.androidannotations.annotations.Click;
 import org.androidannotations.annotations.EActivity;
 import org.androidannotations.annotations.LongClick;
 import org.androidannotations.annotations.UiThread;
@@ -51,34 +55,52 @@ public class AboutActivity extends AppCompatActivity {
 //        setContentView(R.layout.activity_about);
 //    }
 
+    @ViewById(R.id.versionTextview)
+    TextView versionTextView;
+
     @ViewById(R.id.XGTokenEditText)
     EditText xgTokenEditText;
 
     @ViewById(R.id.aboutToolbar)
     Toolbar toolbar;
 
-    @ViewById(R.id.menuListview)
-    ListView listView;
+    @ViewById(R.id.aboutCheckVersionButton)
+    Button checkVersionButton;
 
-    private List<String> list;
-    private ArrayAdapter<String> arrayAdapter;
+    @ViewById(R.id.aboutPrivacyButton)
+    Button privacyButton;
+
+    @ViewById(R.id.aboutFeedbackButton)
+    Button feedbackButton;
+
     private boolean isCheckingVersion = false;
 
     @AfterViews
     void init(){
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-        getWindow().setStatusBarColor(this.getResources().getColor(R.color.colorPrimary));
+//        getWindow().addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+////        getWindow().setStatusBarColor(this.getResources().getColor(R.color.colorPrimary));
+//        getWindow().setStatusBarColor(getResources().getColor(androidx.core.R.color.androidx_core_ripple_material_light));
+//        getWindow().setNavigationBarColor(Color.TRANSPARENT);
+//        getWindow().getDecorView().setSystemUiVisibility(
+//                View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
+//                        View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+//                        View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+//        );
 
+
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+        getWindow().setStatusBarColor(Color.TRANSPARENT);
         getWindow().setNavigationBarColor(Color.TRANSPARENT);
         getWindow().getDecorView().setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
                         View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
-                        View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
+                        View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
         );
 
 
         setSupportActionBar(toolbar);
-        toolbar.setNavigationIcon(R.drawable.ic_arrow_back_48px);
+        toolbar.setNavigationIcon(R.drawable.ic_arrow_back_black_48px);
         toolbar.setNavigationOnClickListener((l) -> {
             onBackPressed();
         });
@@ -87,42 +109,49 @@ public class AboutActivity extends AppCompatActivity {
         Log.e("about token: ", token);
         xgTokenEditText.setText(token);
 
-        list = Arrays.asList("检查新版本", "隐私声明", "反馈与建议");
-        arrayAdapter= new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, list);
-        listView.setAdapter(arrayAdapter);
-
-        listView.setOnItemClickListener((parent, view, position, id) -> {
-            switch (position){
-                case 0:
-                    checkVersion(false);
-                    break;
-                case 1:
-//                    Intent intent = new Intent(
-//                            Intent.ACTION_VIEW,
-//                            Uri.parse("http://volleyball.nowcent.cn/privacy.html")
-//                    );
-//                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-//                    startActivity(intent);
-
-                    Intent intent1 = new Intent(this, PrivacyActivity_.class);
-                    intent1.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    startActivity(intent1);
-                    break;
-                case 2:
-                    Intent intent2 = new Intent(this, FeedbackActivity_.class);
-                    intent2.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    startActivity(intent2);
-                    break;
-            }
-        });
-
         checkVersion(true);
+
+        setVersionName();
+    }
+
+    void setVersionName(){
+        String versionName = null;
+        try {
+            PackageManager pm = getPackageManager();
+            PackageInfo pi = pm.getPackageInfo(getPackageName(), 0);
+            versionName = pi.versionName;
+        } catch (Exception e) {
+            Log.e("VersionInfo", "Exception", e);
+        }
+        if(versionName == null){
+            versionName = "未获取到当前版本信息";
+        }
+
+        versionTextView.setText(versionName);
+    }
+
+    @Click(R.id.aboutCheckVersionButton)
+    void onCheckVersionButtonClick(){
+        checkVersion(false);
+    }
+
+    @Click(R.id.aboutPrivacyButton)
+    void onPrivacyButtonClick(){
+        Intent intent1 = new Intent(this, PrivacyActivity_.class);
+        intent1.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent1);
+    }
+
+    @Click(R.id.aboutFeedbackButton)
+    void onFeedbackButtonClick(){
+        Intent intent2 = new Intent(this, FeedbackActivity_.class);
+        intent2.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent2);
     }
 
     @UiThread
     void setVersionItemText(String text){
-        list.set(0, text);
-        arrayAdapter.notifyDataSetChanged();
+        checkVersionButton.setText(text);
     }
 
     @Background
