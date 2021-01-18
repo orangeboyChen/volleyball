@@ -41,6 +41,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.amap.api.services.weather.LocalWeatherForecastResult;
 import com.amap.api.services.weather.LocalWeatherLive;
@@ -53,6 +54,7 @@ import com.nowcent.volleyball.activity.PasswordActivity_;
 import com.nowcent.volleyball.activity.ScheduleActivity;
 //import com.nowcent.volleyball.activity.ScheduleActivity_;
 import com.nowcent.volleyball.activity.ScheduleActivity_;
+import com.nowcent.volleyball.activity.VerifyActivity_;
 import com.nowcent.volleyball.activity.adapter.CardAdapter;
 import com.nowcent.volleyball.pojo.BookPojo;
 import com.nowcent.volleyball.pojo.ResultMessage;
@@ -70,6 +72,7 @@ import org.androidannotations.annotations.EFragment;
 import org.androidannotations.annotations.TextChange;
 import org.androidannotations.annotations.UiThread;
 import org.androidannotations.annotations.ViewById;
+import org.json.JSONException;
 
 import java.io.IOException;
 import java.text.ParseException;
@@ -163,6 +166,12 @@ public class SpiderFragment extends Fragment {
     @ViewById(R.id.spiderRecentTitleTextView)
     TextView spiderRecentTitleTextView;
 
+    @ViewById(R.id.spiderVerifyInfoTextView)
+    TextView spiderVerifyInfoTextView;
+
+    @ViewById(R.id.spiderVerifyButton)
+    Button spiderVerifyButton;
+
     CardAdapter adapter;
 
     private boolean isFirstUpdateRecentData = true;
@@ -220,6 +229,21 @@ public class SpiderFragment extends Fragment {
                     getActivity().runOnUiThread(() -> {
                         spiderStatusInfoTextView.setText(getTimeString(recentResult.getTime()) + " " + recentResult.getMessage());
                     });
+                }
+
+                @Override
+                public void onLackOfCaptcha() {
+                    changeTaskInfo("失败", "验证码数量不足，请补充验证码数量！", Color.parseColor("#D50000"));
+                    progressBar.setProgressDrawable(getContext().getResources().getDrawable(R.drawable.progressbar_red));
+                    progressBar.setProgress(100);
+
+                    changeCaptchaInfo(0, null, null);
+
+                }
+
+                @Override
+                public void onCaptchaInfoChange(int total, long earliestExpireTime, long latestExpireTime) {
+                    changeCaptchaInfo(total, Utils.getTimeString(earliestExpireTime), Utils.getTimeString(latestExpireTime));
                 }
 
                 @Override
@@ -286,6 +310,11 @@ public class SpiderFragment extends Fragment {
     }
 
     @UiThread
+    void changeCaptchaInfo(int total, String earliestExpireTime, String latestExpireTime){
+        spiderVerifyInfoTextView.setText(total + "个验证码" + (total > 0 ? "，从" + earliestExpireTime + "到" + latestExpireTime : ""));
+    }
+
+    @UiThread
     void changeTaskInfo(String title, String tip, int color){
         spiderStatusTextView.setTextColor(color);
         spiderStatusTextView.setText(title);
@@ -307,6 +336,11 @@ public class SpiderFragment extends Fragment {
 
         initRecentCardList();
         getRecentData();
+        try {
+            initCaptchaInfo();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
         initCard();
         checkRemoteData();
 
@@ -478,6 +512,17 @@ public class SpiderFragment extends Fragment {
                 });
     }
 
+    @Click(R.id.spiderVerifyButton)
+    void toVerifyPage(){
+        if(MainActivity.getStatus()){
+            showDialog("抢场时不允许刷验证码", null, "好");
+            return;
+        }
+        Intent intent = new Intent(getContext(), VerifyActivity_.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
+    }
+
     @Click(R.id.spiderDoButton)
     void showSingleCareView(){
         if(singleCareView.getVisibility() == View.VISIBLE){
@@ -644,6 +689,11 @@ public class SpiderFragment extends Fragment {
     @Override
     public void onStart() {
         super.onStart();
+        try {
+            initCaptchaInfo();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
         spiderService = new SpiderService();
         Intent intent = new Intent(getContext(), SpiderService.class);
         getContext().startService(intent);
@@ -687,6 +737,9 @@ public class SpiderFragment extends Fragment {
     }
 
     private void initCard(){
+
+
+
         String cardTitle = getCurrent(getContext(), "cardTitle");
         String recentMessage = get(getContext(), "recentMessage");
 
@@ -755,6 +808,21 @@ public class SpiderFragment extends Fragment {
         bookList = new ArrayList<>();
         adapter = new CardAdapter(getContext(), bookList, this::join);
         recyclerView.setAdapter(adapter);
+
+    }
+
+
+    private void initCaptchaInfo() throws JSONException {
+        JSONArray captchaArray = DataUtils.getCaptchaArray(getContext());
+        if(captchaArray.size() == 0){
+            changeCaptchaInfo(0, null, null);
+            return;
+        }
+        long latestExpireTime = ((JSONObject)captchaArray.get(0)).getLong("time");
+        if(captchaArray.size() > 1){
+            latestExpireTime = ((JSONObject)captchaArray.get(captchaArray.size() - 1)).getLong("time");
+        }
+        changeCaptchaInfo(captchaArray.size(), Utils.getTimeString(((JSONObject)captchaArray.get(0)).getLong("time")), Utils.getTimeString(latestExpireTime));
 
     }
 

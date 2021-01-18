@@ -151,6 +151,10 @@ public class MainActivity extends AppCompatActivity {
         status = flag;
     }
 
+    public static boolean getStatus(){
+        return status;
+    }
+
 //    @Override
 //    protected void onCreate(Bundle savedInstanceState) {
 //        super.onCreate(savedInstanceState);

@@ -143,10 +143,9 @@
                         android:id="@+id/textView2"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
                         android:text="最近的订场尝试"
                         app:layout_constraintStart_toStartOf="@+id/spiderStatusTextView"
-                        app:layout_constraintTop_toBottomOf="@+id/spiderTipTextView" />
+                        app:layout_constraintTop_toBottomOf="@+id/spiderVerifyInfoTextView" />
 
                     <TextView
                         android:id="@+id/spiderStatusInfoTextView"
@@ -206,7 +205,29 @@
                             android:foreground="?android:attr/selectableItemBackground"
                             android:text="快速订场"
                             android:textColor="@color/colorLink" />
+
+                        <Button
+                            android:id="@+id/spiderVerifyButton"
+                            style="?android:attr/borderlessButtonStyle"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.5"
+                            android:background="@android:color/transparent"
+                            android:foreground="?android:attr/selectableItemBackground"
+                            android:text="刷验证码"
+                            android:textColor="@color/colorLink" />
+
                     </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/spiderVerifyInfoTextView"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="16dp"
+                        android:text="50个验证码，从xx到xx"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="@+id/spiderStatusTextView"
+                        app:layout_constraintTop_toBottomOf="@+id/spiderTipTextView" />
                 </androidx.constraintlayout.widget.ConstraintLayout>
 
             </androidx.cardview.widget.CardView>

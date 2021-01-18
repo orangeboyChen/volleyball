@@ -3,11 +3,10 @@ package com.nowcent.volleyball.utils;
 import android.widget.EditText;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
 import com.spider.Spider;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.io.IOException;
 import java.text.DateFormat;
@@ -35,10 +34,13 @@ public class Utils {
     private static int MAX_HOUR = 22;
 
 
-    public static String getSaveData(Date startDate, Date endDate, int teamId) throws ParseException {
+    public static String getSaveData(Date startDate, Date endDate, int teamId, String sessionId, String sig, String token) throws ParseException {
 //        Date startDate = DateFormat.getDateTimeInstance().parse("2013-01-01 15:00:00");
 //        Date endDate = DateFormat.getDateTimeInstance().parse("2013-01-01 16:00:00");
 //        Date currentDate = DateFormat.getDateInstance().parse(LocalDate.now().toString());
+
+        final String SCENE = "nc_other";
+
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.CHINA);
         sdf.setTimeZone(TimeZone.getTimeZone("Asia/Shanghai"));
         Date currentDate = sdf.parse(sdf.format(new Date()));
@@ -67,7 +69,12 @@ public class Utils {
                 "      \"fightDeclaration\":null,\n" +
                 "      \"fightMobile\":null}\n" +
                 "  ],\n" +
-                "  \"sportPlatformUserList\":[]}";
+                "  \"sportPlatformUserList\":[],\n" +
+                "  \"scene\": \"" + SCENE + "\",\n" +
+                "  \"sessionId\": \"" + sessionId + "\",\n" +
+                "  \"sig\": \"" + sig + "\",\n" +
+                "  \"token\": \"" + token + "\"\n" +
+                "}";
 
     }
 
@@ -105,29 +112,31 @@ public class Utils {
         return Pattern.compile("[0-9]*").matcher(text).matches();
     }
 
-    public static int getTeamId(String token, Date startDate, Date endDate) throws ParseException, NoSuchMethodException, ScriptException, IOException, JSONException {
+    public static int getTeamId(String token, Date startDate, Date endDate) throws ParseException, NoSuchMethodException, ScriptException, IOException {
         //初始化蜘蛛类
         Spider spider = Spider.getInstance();
         String data = getOrderData(startDate, endDate);
         String result = spider.run(PRE_URL, ORDER_URI, METHOD, data, token);
 
         //解析数据
-        JSONObject jsonObject = new JSONObject(result);
+        JSONObject jsonObject = JSONObject.parseObject(result);
 
-        int code = jsonObject.getInt("code");
+        int code = jsonObject.getIntValue("code");
         if(code != 200){
             return -1;
         }
         JSONObject dataObject = jsonObject.getJSONObject("data");
         JSONArray sportTeamList = (JSONArray) dataObject.getJSONArray("sportTeamList");
         JSONObject sportTeamListObject = sportTeamList.getJSONObject(0);
-        return sportTeamListObject.getInt("sportTeamId");
+        return sportTeamListObject.getIntValue("sportTeamId");
     }
 
-    public static String save(String token, Date startDate, Date endDate, int teamId) throws ParseException, NoSuchMethodException, ScriptException, IOException, JSONException {
+    public static String save(String token, Date startDate, Date endDate, int teamId, String sessionId, String sig, String captchaToken) throws ParseException, NoSuchMethodException, ScriptException, IOException {
         //初始化蜘蛛类
         Spider spider = Spider.getInstance();
-        String data = getSaveData(startDate, endDate, teamId);
+
+
+        String data = getSaveData(startDate, endDate, teamId, sessionId, sig, captchaToken);
         System.out.println(data);
         String result;
         try{
@@ -138,9 +147,9 @@ public class Utils {
         }
 
         //解析数据
-        JSONObject jsonObject = new JSONObject(result);
+        JSONObject jsonObject = JSONObject.parseObject(result);
 
-        int code = jsonObject.getInt("code");
+        int code = jsonObject.getIntValue("code");
         if(code == 200){
             return null;
         }
@@ -162,6 +171,13 @@ public class Utils {
         SimpleDateFormat sdf =new SimpleDateFormat("MM-dd HH:mm:ss" );
         Date d= new Date();
         return sdf.format(date);
+    }
+
+
+    public static String getTimeString(long time){
+        SimpleDateFormat sdf =new SimpleDateFormat("MM-dd HH:mm:ss" );
+        Date d= new Date();
+        return sdf.format(time);
     }
 
 

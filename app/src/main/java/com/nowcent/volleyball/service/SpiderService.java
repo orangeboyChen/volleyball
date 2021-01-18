@@ -10,11 +10,13 @@ import android.util.Log;
 import androidx.annotation.Nullable;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
 import com.nowcent.volleyball.R;
 import com.nowcent.volleyball.activity.MainActivity;
 import com.nowcent.volleyball.pojo.ResultMessage;
+import com.nowcent.volleyball.utils.DataUtils;
 
-import org.json.JSONException;
 
 import java.io.IOException;
 import java.text.ParseException;
@@ -104,7 +106,46 @@ public class SpiderService extends IntentService {
 
 
                     boolean isSuccess = false;
-                    String result = save(token, startDate, endDate, teamId);
+
+                    //获取验证码信息
+                    JSONArray captchaArray = DataUtils.getCaptchaArray(getApplicationContext());
+                    if(captchaArray.size() == 0){
+                        executorService.shutdownNow();
+
+                        onDataCallback.onLackOfCaptcha();
+
+                        taskCurrent = taskTotal;
+                        onDataCallback.onCountDataChange(taskTotal, taskTotal);
+                        onDataCallback.onLackOfCaptcha();
+
+                        taskTotal = 0;
+                        taskCurrent = 0;
+                        MainActivity.setStatus(false);
+                        Thread.sleep(250);
+
+                        return;
+                    }
+
+
+
+                    long latestExpireTime = 0;
+
+                    if(captchaArray.size() > 0){
+                        latestExpireTime = ((JSONObject)captchaArray.get(0)).getLong("time");
+                    }
+
+                    if(captchaArray.size() > 1){
+                        latestExpireTime = ((JSONObject)captchaArray.get(captchaArray.size() - 1)).getLong("time");
+                    }
+                    onDataCallback.onCaptchaInfoChange(captchaArray.size() - 1, ((JSONObject)captchaArray.get(0)).getLong("time"), latestExpireTime);
+                    String captchaToken = ((JSONObject)captchaArray.get(0)).getString("nc_token");
+                    String sig = ((JSONObject)captchaArray.get(0)).getString("sig");
+                    String sessionId = ((JSONObject)captchaArray.get(0)).getString("csessionid");
+
+                    captchaArray.remove(0);
+                    DataUtils.saveCaptchaArray(getApplicationContext(), captchaArray);
+
+                    String result = save(token, startDate, endDate, teamId, sessionId, sig, captchaToken);
                     if (result == null) {
 //                        executorService = new ThreadPoolExecutor(1, 1, 0, TimeUnit.SECONDS, new ArrayBlockingQueue<>(512), new ThreadPoolExecutor.DiscardPolicy());
 //                            showDialog("抢场成功", "请与" + startDate.getHours() + "时前到达场地", "好");
@@ -140,7 +181,7 @@ public class SpiderService extends IntentService {
                     }
                     Thread.sleep(250);
 
-                } catch (ParseException | InterruptedException | JSONException | IOException | ScriptException | NoSuchMethodException e) {
+                } catch (ParseException | InterruptedException | IOException | ScriptException | NoSuchMethodException e) {
                     e.printStackTrace();
                 }
             });
@@ -173,6 +214,7 @@ public class SpiderService extends IntentService {
         resultMessages.add(resultMessage);
     }
 
+
     public void setOnDataCallback(OnDataCallback onDataCallback) {
         this.onDataCallback = onDataCallback;
     }
@@ -183,6 +225,9 @@ public class SpiderService extends IntentService {
         void onTaskSuccess(Date startDate, Date endDate);
         void onTaskFail(String message);
         void onRecentResult(ResultMessage recentResult);
+
+        void onLackOfCaptcha();
+        void onCaptchaInfoChange(int total, long earliestExpireTime, long latestExpireTime);
 
         void onCountDataChange(int current, int total);
         void success(Date startDate, Date endDate);

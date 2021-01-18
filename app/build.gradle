@@ -21,8 +21,8 @@ android {
         applicationId "com.nowcent.volleyball"
         minSdkVersion 26
         targetSdkVersion 29
-        versionCode 8
-        versionName "1.4.0"
+        versionCode 9
+        versionName "1.5.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -93,6 +93,8 @@ dependencies {
     implementation 'com.huawei.hms:push:5.0.1.300'
     implementation 'com.tencent.tpns:xiaomi:1.2.0.3-release'
     implementation 'com.tencent.tpns:meizu:1.2.0.3-release'
+//    compile group: 'com.squareup.okhttp3', name: 'okhttp', version: '4.8.1'
+
 
 //    implementation 'com.tencent.tpns:fcm:1.2.0.3-release' // fcm 推送 [VERSION] 为当前SDK版本号,版本号可在SDK下载页查看
 //    implementation 'com.google.firebase:firebase-messaging:20.2.3'

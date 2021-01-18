@@ -120,6 +120,7 @@ public class SplashActivity extends AppCompatActivity {
                 toPasswordActivity(password, result);
             }
             else{
+                //Todo: 这里改进入的activity
                 Intent intent = new Intent(SplashActivity.this, MainActivity_.class);
                 intent.putExtra("data", result.toJSONString());
                 startActivity(intent);

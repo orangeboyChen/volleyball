@@ -41,6 +41,7 @@
     <string name="getToken">登录</string>
     <string name="feedback">反馈与建议</string>
     <string name="privacy">隐私声明</string>
+    <string name="verify">获取验证码</string>
 
     <string name="compose_shortcut_short_label1">抢场</string>
     <string name="compose_shortcut_long_label1">抢场</string>
