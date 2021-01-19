@@ -30,6 +30,10 @@ public class Utils {
     private static final String ORDER_URI = "/v2/sportPlatformUser/queryByDealPlatform.do";
     private static final String METHOD = "post";
 
+    private static final String DEAL_URI = "/v2/pay/dealPay.do";
+    private static final String DEAL_RETURN_URI_PREFIX = "https://lhwtt.ydmap.cn/pay/";
+    private static final String DEAL_RETURN_URI_SUFFIX = "/result?ref=";
+
     private static int MIN_HOUR = 9;
     private static int MAX_HOUR = 22;
 
@@ -151,12 +155,41 @@ public class Utils {
 
         int code = jsonObject.getIntValue("code");
         if(code == 200){
+            JSONObject dataJson = jsonObject.getJSONObject("data");
+            return deal(token, dataJson.getString("dealId"));
+        }
+        else{
+            return result;
+        }
+    }
+
+    public static String deal(String token, String dealId){
+        Spider spider = Spider.getInstance();
+
+        //language=JSON
+        String data = "{\n" +
+                "  " +
+                "\"dealId\":\"" + dealId + "\",\n" +
+                "  " +
+                "\"payWayInfo\":[],\n" +
+                "  \"returnUrl\":\"" + DEAL_RETURN_URI_PREFIX + dealId + DEAL_RETURN_URI_SUFFIX + "\"\n" +
+                "}";
+
+        String result = null;
+        try {
+            result = spider.run(PRE_URL, DEAL_URI, METHOD, data, token);
+        } catch (IOException | ScriptException | NoSuchMethodException e) {
+            e.printStackTrace();
+        }
+
+        JSONObject jsonObject = JSONObject.parseObject(result);
+        int code = jsonObject.getIntValue("code");
+        if(code == 200){
             return null;
         }
         else{
             return result;
         }
-
     }
 
     public static String getTimeString(){
